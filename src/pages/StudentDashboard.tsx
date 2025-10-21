@@ -15,6 +15,13 @@ interface Course {
   duration: string;
   lessons: number;
   thumbnail: string;
+  materials?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    url: string;
+    size: number;
+  }>;
 }
 
 interface Enrollment {
@@ -103,8 +110,12 @@ const StudentDashboard = () => {
                 return (
                   <Card key={course.id} className="hover:shadow-lg transition-shadow">
                     <CardHeader>
-                      <div className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg mb-4 flex items-center justify-center">
-                        <BookOpen className="h-12 w-12 text-primary" />
+                      <div className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                        {course.thumbnail ? (
+                          <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <BookOpen className="h-12 w-12 text-primary" />
+                        )}
                       </div>
                       <CardTitle>{course.title}</CardTitle>
                       <CardDescription>{course.educator}</CardDescription>
@@ -154,8 +165,12 @@ const StudentDashboard = () => {
               {availableCourses.map(course => (
                 <Card key={course.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
-                    <div className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg mb-4 flex items-center justify-center">
-                      <BookOpen className="h-12 w-12 text-primary" />
+                    <div className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                      {course.thumbnail ? (
+                        <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <BookOpen className="h-12 w-12 text-primary" />
+                      )}
                     </div>
                     <CardTitle>{course.title}</CardTitle>
                     <CardDescription>{course.educator}</CardDescription>

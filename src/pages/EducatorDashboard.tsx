@@ -19,6 +19,13 @@ interface Course {
   duration: string;
   lessons: number;
   thumbnail: string;
+  materials?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    url: string;
+    size: number;
+  }>;
 }
 
 const EducatorDashboard = () => {
@@ -35,6 +42,9 @@ const EducatorDashboard = () => {
     duration: '',
     lessons: '0',
   });
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string>('');
+  const [materialFiles, setMaterialFiles] = useState<File[]>([]);
 
   useEffect(() => {
     if (!user || user.role !== 'educator') {
@@ -51,16 +61,45 @@ const EducatorDashboard = () => {
     setCourses(myCourses);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const allCourses = JSON.parse(localStorage.getItem('edtech_courses') || '[]');
+    
+    // Handle thumbnail upload
+    let thumbnailUrl = editingCourse?.thumbnail || '';
+    if (thumbnailFile) {
+      const reader = new FileReader();
+      thumbnailUrl = await new Promise((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(thumbnailFile);
+      });
+    }
+
+    // Handle materials upload
+    const materials = editingCourse?.materials || [];
+    if (materialFiles.length > 0) {
+      for (const file of materialFiles) {
+        const reader = new FileReader();
+        const fileUrl = await new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(file);
+        });
+        materials.push({
+          id: `${Date.now()}-${Math.random()}`,
+          name: file.name,
+          type: file.type,
+          url: fileUrl,
+          size: file.size,
+        });
+      }
+    }
     
     if (editingCourse) {
       // Update existing course
       const updatedCourses = allCourses.map((c: Course) =>
         c.id === editingCourse.id
-          ? { ...c, ...formData, lessons: parseInt(formData.lessons) }
+          ? { ...c, ...formData, lessons: parseInt(formData.lessons), thumbnail: thumbnailUrl, materials }
           : c
       );
       localStorage.setItem('edtech_courses', JSON.stringify(updatedCourses));
@@ -76,7 +115,8 @@ const EducatorDashboard = () => {
         lessons: parseInt(formData.lessons),
         educator: user?.name || '',
         educatorId: user?.id || '',
-        thumbnail: '',
+        thumbnail: thumbnailUrl,
+        materials,
       };
       allCourses.push(newCourse);
       localStorage.setItem('edtech_courses', JSON.stringify(allCourses));
@@ -99,6 +139,7 @@ const EducatorDashboard = () => {
       duration: course.duration,
       lessons: course.lessons.toString(),
     });
+    setThumbnailPreview(course.thumbnail);
     setIsDialogOpen(true);
   };
 
@@ -121,6 +162,26 @@ const EducatorDashboard = () => {
       lessons: '0',
     });
     setEditingCourse(null);
+    setThumbnailFile(null);
+    setThumbnailPreview('');
+    setMaterialFiles([]);
+  };
+
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setThumbnailFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setThumbnailPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleMaterialsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setMaterialFiles(files);
   };
 
   const handleDialogClose = (open: boolean) => {
@@ -188,6 +249,46 @@ const EducatorDashboard = () => {
                       required
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="thumbnail">Course Thumbnail</Label>
+                    <Input
+                      id="thumbnail"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleThumbnailChange}
+                    />
+                    {thumbnailPreview && (
+                      <div className="mt-2">
+                        <img
+                          src={thumbnailPreview}
+                          alt="Thumbnail preview"
+                          className="w-full h-32 object-cover rounded-lg"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="materials">Study Materials</Label>
+                    <Input
+                      id="materials"
+                      type="file"
+                      accept=".pdf,.docx,.doc,.pptx,.ppt,.xlsx,.xls,image/*,video/*"
+                      multiple
+                      onChange={handleMaterialsChange}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Upload PDFs, documents, images, or videos (max 20MB per file)
+                    </p>
+                    {materialFiles.length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {materialFiles.map((file, idx) => (
+                          <p key={idx} className="text-sm text-muted-foreground">
+                            • {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="duration">Duration</Label>
@@ -235,8 +336,12 @@ const EducatorDashboard = () => {
             {courses.map(course => (
               <Card key={course.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
-                  <div className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg mb-4 flex items-center justify-center">
-                    <BookOpen className="h-12 w-12 text-primary" />
+                  <div className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                    {course.thumbnail ? (
+                      <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <BookOpen className="h-12 w-12 text-primary" />
+                    )}
                   </div>
                   <CardTitle>{course.title}</CardTitle>
                   <CardDescription>{course.description}</CardDescription>

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, BookOpen, PlayCircle, FileText } from 'lucide-react';
+import { ArrowLeft, BookOpen, PlayCircle, FileText, Download, FileIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Course {
@@ -15,6 +15,13 @@ interface Course {
   educator: string;
   duration: string;
   lessons: number;
+  materials?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    url: string;
+    size: number;
+  }>;
 }
 
 interface Lesson {
@@ -107,6 +114,21 @@ const CourseDetail = () => {
     });
   };
 
+  const handleDownload = (material: any) => {
+    const link = document.createElement('a');
+    link.href = material.url;
+    link.download = material.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const getFileIcon = (type: string) => {
+    if (type.startsWith('video/')) return <PlayCircle className="h-5 w-5 text-primary" />;
+    if (type.startsWith('image/')) return <FileIcon className="h-5 w-5 text-secondary" />;
+    return <FileText className="h-5 w-5 text-accent" />;
+  };
+
   if (!course) {
     return null;
   }
@@ -140,7 +162,7 @@ const CourseDetail = () => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="mb-6">
               <CardHeader>
                 <CardTitle>Course Content</CardTitle>
                 <CardDescription>Click on lessons to mark them as complete</CardDescription>
@@ -174,6 +196,43 @@ const CourseDetail = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {course.materials && course.materials.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Study Materials</CardTitle>
+                  <CardDescription>Download course resources and materials</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {course.materials.map((material) => (
+                      <div
+                        key={material.id}
+                        className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          {getFileIcon(material.type)}
+                          <div>
+                            <p className="font-medium">{material.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(material.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownload(material)}
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           <div>
